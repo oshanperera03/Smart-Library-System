@@ -6,7 +6,6 @@ const navItems = [
   { label: 'Seats', icon: NotebookPen, to: '/admin/seats' },
   { label: 'Students', icon: Users, to: '/admin/students' },
   { label: 'RFID Logs', icon: Radio, to: '/admin/rfid-logs' },
-  { label: 'Reservations', icon: CalendarClock, to: '/admin/reservations' },
   { label: 'Settings', icon: Settings, to: '/admin/settings' },
 ];
 
