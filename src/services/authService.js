@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const getUserProfile = async (uid) => {
@@ -15,6 +15,15 @@ export const createUserProfile = async (uid, profileData) => {
     active: true,
     createdAt: serverTimestamp(),
     ...profileData,
+  });
+  return getUserProfile(uid);
+};
+
+export const updateUserProfile = async (uid, updates) => {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    ...updates,
+    updatedAt: serverTimestamp(),
   });
   return getUserProfile(uid);
 };

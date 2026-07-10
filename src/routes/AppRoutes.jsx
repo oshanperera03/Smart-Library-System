@@ -10,6 +10,7 @@ import DashboardPage from '../pages/DashboardPage';
 import AdminSeatsPage from '../pages/AdminSeatsPage';
 import AdminStudentsPage from '../pages/AdminStudentsPage';
 import AdminRfidLogsPage from '../pages/AdminRfidLogsPage';
+import SettingsPage from '../pages/SettingsPage';
 
 const AppRoutes = () => {
   return (
@@ -19,6 +20,7 @@ const AppRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       <Route element={<ProtectedRoute />}>
+        <Route path="/settings" element={<SettingsPage />} />
         <Route element={<StudentRoute />}>
           <Route path="/student" element={<StudentHomePage />} />
         </Route>

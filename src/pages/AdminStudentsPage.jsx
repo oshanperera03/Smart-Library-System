@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { setStudentActiveStatus } from '../services/studentService';
+import { updateUserProfile } from '../services/authService';
 import Sidebar from '../components/Sidebar';
 import TopNav from '../components/TopNav';
 import StatCard from '../components/StatCard';
@@ -9,6 +10,8 @@ const AdminStudentsPage = () => {
   const { seats, students, loading, errors } = useDashboardData();
   const [actionMessage, setActionMessage] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const [editingRfidId, setEditingRfidId] = useState(null);
+  const [rfidValue, setRfidValue] = useState('');
 
   const stats = useMemo(() => ({
     totalStudents: students.length,
@@ -67,16 +70,19 @@ const AdminStudentsPage = () => {
                         <th className="px-3 py-3">Student</th>
                         <th className="px-3 py-3">Email</th>
                         <th className="px-3 py-3">Student ID</th>
+                        <th className="px-3 py-3">RFID</th>
                         <th className="px-3 py-3">Status</th>
+                        <th className="px-3 py-3"></th>
                         <th className="px-3 py-3">Control</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {students.map((student) => (
                         <tr key={student.id} className="hover:bg-slate-50">
-                          <td className="px-3 py-3 font-semibold text-slate-800">{student.fullName || student.name || 'Unknown'}</td>
-                          <td className="px-3 py-3 text-slate-700">{student.email}</td>
-                          <td className="px-3 py-3 text-slate-700">{student.studentId || '—'}</td>
+                            <td className="px-3 py-3 font-semibold text-slate-800">{student.fullName || student.name || 'Unknown'}</td>
+                            <td className="px-3 py-3 text-slate-700">{student.email}</td>
+                            <td className="px-3 py-3 text-slate-700">{student.studentId || '—'}</td>
+                            <td className="px-3 py-3 text-slate-700 font-mono">{student.rfidUid || '—'}</td>
                           <td className="px-3 py-3">
                             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] ${
                               student.active === false ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
@@ -84,20 +90,57 @@ const AdminStudentsPage = () => {
                               {student.active === false ? 'Inactive' : 'Active'}
                             </span>
                           </td>
-                          <td className="px-3 py-3">
-                            <button
-                              type="button"
-                              disabled={busyId === student.id}
-                              onClick={() => handleToggleActive(student.id, student.active === false)}
-                              className={`rounded-2xl px-3 py-2 text-sm font-semibold transition ${
-                                student.active === false
-                                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                  : 'bg-rose-600 text-white hover:bg-rose-700'
-                              } disabled:opacity-50`}
-                            >
-                              {student.active === false ? 'Activate' : 'Deactivate'}
-                            </button>
-                          </td>
+                            <td className="px-3 py-3">
+                              {editingRfidId === student.id ? (
+                                <div className="flex items-center gap-2">
+                                  <input value={rfidValue} onChange={(e) => setRfidValue(e.target.value)} className="rounded-lg border border-slate-200 px-2 py-1 text-sm" placeholder="RFID UID" />
+                                  <button
+                                    onClick={async () => {
+                                      setBusyId(student.id);
+                                      setActionMessage('');
+                                      try {
+                                        await updateUserProfile(student.id, { rfidUid: rfidValue || null });
+                                        setActionMessage('RFID assigned.');
+                                        setEditingRfidId(null);
+                                        setRfidValue('');
+                                      } catch (err) {
+                                        setActionMessage(err.message || 'Unable to assign RFID.');
+                                      } finally {
+                                        setBusyId(null);
+                                      }
+                                    }}
+                                    disabled={busyId === student.id}
+                                    className="rounded-2xl bg-cyan-600 px-3 py-1 text-sm text-white disabled:opacity-50"
+                                  >
+                                    Save
+                                  </button>
+                                  <button onClick={() => { setEditingRfidId(null); setRfidValue(''); }} className="rounded-2xl border border-slate-200 px-2 py-1 text-sm">Cancel</button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => { setEditingRfidId(student.id); setRfidValue(student.rfidUid || ''); setActionMessage(''); }}
+                                    className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-semibold"
+                                  >
+                                    Assign RFID
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-3 py-3">
+                              <button
+                                type="button"
+                                disabled={busyId === student.id}
+                                onClick={() => handleToggleActive(student.id, student.active === false)}
+                                className={`rounded-2xl px-3 py-2 text-sm font-semibold transition ${
+                                  student.active === false
+                                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                    : 'bg-rose-600 text-white hover:bg-rose-700'
+                                } disabled:opacity-50`}
+                              >
+                                {student.active === false ? 'Activate' : 'Deactivate'}
+                              </button>
+                            </td>
                         </tr>
                       ))}
                     </tbody>

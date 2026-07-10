@@ -6,7 +6,7 @@ const navItems = [
   { label: 'Seats', icon: NotebookPen, to: '/admin/seats' },
   { label: 'Students', icon: Users, to: '/admin/students' },
   { label: 'RFID Logs', icon: Radio, to: '/admin/rfid-logs' },
-  { label: 'Settings', icon: Settings, to: '/admin/settings' },
+  { label: 'Settings', icon: Settings, to: '/settings' },
 ];
 
 const Sidebar = () => {
