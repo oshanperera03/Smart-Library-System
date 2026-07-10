@@ -1,15 +1,18 @@
+import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, NotebookPen, Users, Radio, CalendarClock, Settings, Sparkles } from 'lucide-react';
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, active: true },
-  { label: 'Seats', icon: NotebookPen },
-  { label: 'Students', icon: Users },
-  { label: 'RFID Logs', icon: Radio },
-  { label: 'Reservations', icon: CalendarClock },
-  { label: 'Settings', icon: Settings },
+  { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard' },
+  { label: 'Seats', icon: NotebookPen, to: '/admin/seats' },
+  { label: 'Students', icon: Users, to: '/admin/students' },
+  { label: 'RFID Logs', icon: Radio, to: '/admin/rfid-logs' },
+  { label: 'Reservations', icon: CalendarClock, to: '/admin/reservations' },
+  { label: 'Settings', icon: Settings, to: '/admin/settings' },
 ];
 
 const Sidebar = () => {
+  const location = useLocation();
+
   return (
     <aside className="hidden h-screen w-72 flex-col border-r border-slate-200 bg-slate-950/95 p-6 text-slate-100 lg:flex">
       <div className="flex items-center gap-3">
@@ -23,20 +26,23 @@ const Sidebar = () => {
       </div>
 
       <nav className="mt-10 space-y-2">
-        {navItems.map(({ label, icon: Icon, active }) => (
-          <button
-            key={label}
-            type="button"
-            className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition ${
-              active
-                ? 'bg-cyan-500/20 text-cyan-300 shadow-lg shadow-cyan-500/10'
-                : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-            }`}
-          >
-            <Icon className="h-5 w-5" />
-            {label}
-          </button>
-        ))}
+        {navItems.map(({ label, icon: Icon, to }) => {
+          const isActive = location.pathname === to;
+          return (
+            <Link
+              key={label}
+              to={to}
+              className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition ${
+                isActive
+                  ? 'bg-cyan-500/20 text-cyan-300 shadow-lg shadow-cyan-500/10'
+                  : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="mt-auto rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-4">

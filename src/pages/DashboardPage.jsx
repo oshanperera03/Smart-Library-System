@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import { CalendarDays, CircleDollarSign, MonitorCheck, Users2 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -6,11 +6,13 @@ import { useDashboardData } from '../hooks/useDashboardData';
 import Sidebar from '../components/Sidebar';
 import TopNav from '../components/TopNav';
 import StatCard from '../components/StatCard';
+import RfidTapModal from '../components/RfidTapModal';
 import { formatTimestamp, getStatusClasses, getStatusLabel } from '../utils/formatters';
 import 'react-toastify/dist/ReactToastify.css';
 
 const DashboardPage = () => {
   const { seats, rfidLogs, latestRfidLog, reservations, loading, errors } = useDashboardData();
+  const [showRfidModal, setShowRfidModal] = useState(false);
 
   const stats = useMemo(() => {
     const total = seats.length;
@@ -38,17 +40,9 @@ const DashboardPage = () => {
   ], [stats]);
 
   useEffect(() => {
-    if (!latestRfidLog) return;
-
-    const seatLabel = latestRfidLog.seatNumber || latestRfidLog.seat || 'Unknown';
-    toast.success(`RFID Card Detected\nStudent: ${latestRfidLog.studentName || latestRfidLog.studentId || 'Unknown'}\nSeat: ${seatLabel}\nTime: ${formatTimestamp(latestRfidLog.timestamp)}`, {
-      position: 'top-right',
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    });
+    if (latestRfidLog) {
+      setShowRfidModal(true);
+    }
   }, [latestRfidLog]);
 
   return (
@@ -218,6 +212,17 @@ const DashboardPage = () => {
         </main>
       </div>
       <ToastContainer />
+      {showRfidModal && latestRfidLog ? (
+        <RfidTapModal
+          rfidLog={latestRfidLog}
+          seats={seats}
+          onClose={() => setShowRfidModal(false)}
+          onAssigned={() => {
+            toast.success('Seat assigned successfully!');
+            setShowRfidModal(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 };

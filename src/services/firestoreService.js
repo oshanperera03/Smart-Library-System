@@ -1,4 +1,4 @@
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const subscribeToSeats = (callback, onError) => {
@@ -14,7 +14,11 @@ export const subscribeToSeats = (callback, onError) => {
 };
 
 export const subscribeToStudents = (callback, onError) => {
-  const q = query(collection(db, 'students'), orderBy('name'));
+  const q = query(
+    collection(db, 'users'),
+    where('role', '==', 'student'),
+    orderBy('fullName')
+  );
   return onSnapshot(
     q,
     (snapshot) => {

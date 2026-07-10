@@ -7,6 +7,8 @@ import RegisterPage from '../pages/RegisterPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import StudentHomePage from '../pages/StudentHomePage';
 import DashboardPage from '../pages/DashboardPage';
+import AdminSeatsPage from '../pages/AdminSeatsPage';
+import AdminStudentsPage from '../pages/AdminStudentsPage';
 
 const AppRoutes = () => {
   return (
@@ -22,8 +24,8 @@ const AppRoutes = () => {
 
         <Route element={<AdminRoute />}>
           <Route path="/admin/dashboard" element={<DashboardPage />} />
-          <Route path="/admin/seats" element={<DashboardPage />} />
-          <Route path="/admin/students" element={<DashboardPage />} />
+          <Route path="/admin/seats" element={<AdminSeatsPage />} />
+          <Route path="/admin/students" element={<AdminStudentsPage />} />
           <Route path="/admin/reservations" element={<DashboardPage />} />
           <Route path="/admin/rfid-logs" element={<DashboardPage />} />
           <Route path="/admin/settings" element={<DashboardPage />} />
