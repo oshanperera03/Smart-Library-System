@@ -11,6 +11,8 @@ import AdminSeatsPage from '../pages/AdminSeatsPage';
 import AdminStudentsPage from '../pages/AdminStudentsPage';
 import AdminRfidLogsPage from '../pages/AdminRfidLogsPage';
 import SettingsPage from '../pages/SettingsPage';
+import StudentProfilePage from '../pages/StudentProfilePage';
+import StudentActivityPage from '../pages/StudentActivityPage';
 
 const AppRoutes = () => {
   return (
@@ -23,6 +25,8 @@ const AppRoutes = () => {
         <Route path="/settings" element={<SettingsPage />} />
         <Route element={<StudentRoute />}>
           <Route path="/student" element={<StudentHomePage />} />
+          <Route path="/student/profile" element={<StudentProfilePage />} />
+          <Route path="/student/activity" element={<StudentActivityPage />} />
         </Route>
 
         <Route element={<AdminRoute />}>
