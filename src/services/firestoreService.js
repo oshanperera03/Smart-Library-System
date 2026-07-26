@@ -1,4 +1,4 @@
-import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, doc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const subscribeToSeats = (callback, onError) => {
@@ -41,13 +41,64 @@ export const subscribeToRfidLogs = (callback, onError) => {
   );
 };
 
+// Look up a student in 'users' collection by their rfidUid field
+const lookupStudentByRfidUid = async (rfidUid) => {
+  if (!rfidUid) return null;
+  const q = query(
+    collection(db, 'users'),
+    where('rfidUid', '==', rfidUid),
+    limit(1)
+  );
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) return null;
+  const userDoc = snapshot.docs[0];
+  return { uid: userDoc.id, ...userDoc.data() };
+};
+
 export const subscribeToLatestRfidLog = (callback, onError) => {
   const q = query(collection(db, 'rfid_logs'), orderBy('timestamp', 'desc'), limit(1));
   return onSnapshot(
     q,
-    (snapshot) => {
-      const doc = snapshot.docs[0];
-      callback(doc ? { id: doc.id, ...doc.data() } : null);
+    async (snapshot) => {
+      const logDoc = snapshot.docs[0];
+      if (!logDoc) {
+        callback(null);
+        return;
+      }
+
+      const logData = { id: logDoc.id, ...logDoc.data() };
+
+      // If studentName/studentId are already stored, use them directly
+      if (logData.studentName && logData.studentId) {
+        callback(logData);
+        return;
+      }
+
+      // Otherwise enrich by looking up the student via rfidUid
+      try {
+        const student = await lookupStudentByRfidUid(logData.rfidUid);
+        if (student) {
+          const enriched = {
+            ...logData,
+            studentId: student.studentId || student.uid,
+            studentName: student.fullName || student.displayName || student.name || 'Unknown',
+          };
+
+          // Optionally write the enriched data back so future reads are instant
+          await updateDoc(doc(db, 'rfid_logs', logDoc.id), {
+            studentId: enriched.studentId,
+            studentName: enriched.studentName,
+          });
+
+          callback(enriched);
+        } else {
+          // rfidUid not registered — still show the log with unknown student
+          callback({ ...logData, studentName: 'Unregistered Card', studentId: null });
+        }
+      } catch (err) {
+        // Fallback: show raw log even if lookup fails
+        callback(logData);
+      }
     },
     (error) => onError?.(error)
   );

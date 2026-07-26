@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn()
+        && (request.auth.uid == userId || isAdmin());
+      allow delete: if false;
+    }
+
+    match /seats/{seatId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    match /rfid_logs/{logId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn();
+      allow delete: if false;
+    }
+
+    match /reservations/{reservationId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn();
+      allow delete: if false;
+    }
+  }
+}

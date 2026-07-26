@@ -8,6 +8,7 @@ import TopNav from '../components/TopNav';
 import StatCard from '../components/StatCard';
 import RfidTapModal from '../components/RfidTapModal';
 import { formatTimestamp, getStatusClasses, getStatusLabel } from '../utils/formatters';
+import { occupySeat } from '../services/seatService';
 import 'react-toastify/dist/ReactToastify.css';
 
 const DashboardPage = () => {
@@ -41,9 +42,53 @@ const DashboardPage = () => {
 
   useEffect(() => {
     if (latestRfidLog) {
-      setShowRfidModal(true);
+      const lastSeenId = sessionStorage.getItem('lastSeenRfidLogId');
+      if (latestRfidLog.id !== lastSeenId) {
+        sessionStorage.setItem('lastSeenRfidLogId', latestRfidLog.id);
+        
+        const location = latestRfidLog.readerLocation || '';
+        const isEntrance = location.toLowerCase().includes('entrance') || location.trim() === '';
+        
+        // Check if the tap location matches a seat's seatNumber
+        const tappedSeat = seats.find((s) => s.seatNumber === location);
+
+        if (isEntrance) {
+          setShowRfidModal(true);
+        } else if (tappedSeat) {
+          // It's a tap at a specific seat
+          const studentReservedSeat = seats.find(
+            (s) => s.status === 'reserved' && s.studentId === latestRfidLog.studentId
+          );
+
+          if (studentReservedSeat) {
+            if (studentReservedSeat.id === tappedSeat.id) {
+              // Correct seat!
+              occupySeat(tappedSeat.id, latestRfidLog.studentId, latestRfidLog.studentName)
+                .then(() => toast.success(`Seat ${tappedSeat.seatNumber} occupied successfully.`))
+                .catch(() => toast.error('Failed to occupy seat.'));
+            } else {
+              // Wrong seat!
+              toast.error(
+                <div>
+                  <strong>Seat Mismatch!</strong><br />
+                  Name: {latestRfidLog.studentName}<br />
+                  ID: {latestRfidLog.studentId}<br />
+                  Reserved Seat: {studentReservedSeat.seatNumber}<br />
+                  Tapped Seat: {tappedSeat.seatNumber}
+                </div>,
+                { autoClose: 10000 } // Keep open longer for admin to see
+              );
+            }
+          } else {
+            toast.info(`Student ${latestRfidLog.studentName} tapped at ${tappedSeat.seatNumber} but has no reserved seat.`);
+          }
+        } else {
+          // If the location is not entrance and not a recognized seat, default to showing modal
+          setShowRfidModal(true);
+        }
+      }
     }
-  }, [latestRfidLog]);
+  }, [latestRfidLog, seats]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -185,7 +230,6 @@ const DashboardPage = () => {
                         <th className="px-3 py-2">Student ID</th>
                         <th className="px-3 py-2">RFID UID</th>
                         <th className="px-3 py-2">Reader Location</th>
-                        <th className="px-3 py-2">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -196,11 +240,6 @@ const DashboardPage = () => {
                           <td className="px-3 py-3 text-slate-700">{log.studentId || 'Unknown'}</td>
                           <td className="px-3 py-3 text-slate-700">{log.rfidUid || 'Unknown'}</td>
                           <td className="px-3 py-3 text-slate-700">{log.readerLocation || 'Unknown'}</td>
-                          <td className="px-3 py-3">
-                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                              {log.status || 'Active'}
-                            </span>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
