@@ -25,11 +25,11 @@ const StudentActivityPage = () => {
   }, [rfidLogs, userProfile]);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         
         {/* Header Section */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
           <button 
             onClick={() => navigate('/student')} 
             className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-cyan-600 transition"
@@ -39,12 +39,12 @@ const StudentActivityPage = () => {
           </button>
           
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
-              <Activity className="h-6 w-6" />
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
+              <Activity className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h1 className="text-3xl font-semibold text-slate-800">My Activity</h1>
-              <p className="mt-1 text-sm text-slate-500">View your library entries and seat interactions</p>
+              <h1 className="text-xl sm:text-3xl font-semibold text-slate-800">My Activity</h1>
+              <p className="mt-1 text-xs sm:text-sm text-slate-500">View your library entries and seat interactions</p>
             </div>
           </div>
         </div>

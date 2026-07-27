@@ -33,23 +33,23 @@ const StudentHomePage = () => {
   }, [seats]);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         
         {/* Header Section */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+          <div className="flex flex-row items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-600">Student Portal</p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-800">Welcome, {userProfile?.fullName || 'Student'}</h1>
-              <p className="mt-2 text-sm text-slate-500">View real-time library seat availability.</p>
+              <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.3em] text-cyan-600">Student Portal</p>
+              <h1 className="mt-2 text-xl sm:text-3xl font-semibold text-slate-800">Welcome, {userProfile?.fullName || 'Student'}</h1>
+              <p className="mt-2 text-xs sm:text-sm text-slate-500">View real-time library seat availability.</p>
             </div>
             
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button 
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600 border border-slate-200 transition hover:bg-slate-200"
+                className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 border border-slate-200 transition hover:bg-slate-200"
               >
                 <User className="h-5 w-5" />
               </button>
@@ -89,7 +89,7 @@ const StudentHomePage = () => {
         </div>
 
         {/* Stats Section */}
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <StatCard title="Total Seats" value={stats.total} subtitle="Across the library" icon={MonitorCheck} tone="cyan" />
           <StatCard title="Available" value={stats.available} subtitle="Ready for booking" icon={CircleDollarSign} tone="emerald" />
           <StatCard title="Reserved" value={stats.reserved} subtitle="Pending occupancy" icon={CalendarDays} tone="amber" />
@@ -97,13 +97,13 @@ const StudentHomePage = () => {
         </section>
 
         {/* Seat Layout Section */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-slate-800">Live Seat Layout</h2>
-            <p className="text-sm text-slate-500">Current availability of seats in the library</p>
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-800">Live Seat Layout</h2>
+            <p className="text-xs sm:text-sm text-slate-500">Current availability of seats in the library</p>
           </div>
           
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {loading.seats ? (
               <p className="col-span-full text-center text-sm text-slate-500 py-10">Loading seat map…</p>
             ) : errors.seats ? (
@@ -112,9 +112,9 @@ const StudentHomePage = () => {
               <p className="col-span-full text-center text-sm text-slate-500 py-10">No seats found.</p>
             ) : (
               seats.map((seat) => (
-                <div key={seat.id} className={`rounded-2xl border p-5 shadow-sm transition-transform hover:-translate-y-1 flex flex-col items-center justify-center gap-3 text-center min-h-[120px] ${getStatusClasses(seat.status)}`}>
-                  <p className="text-2xl font-bold">{seat.seatNumber}</p>
-                  <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-wider">
+                <div key={seat.id} className={`rounded-2xl border p-4 sm:p-5 shadow-sm transition-transform hover:-translate-y-1 flex flex-col items-center justify-center gap-2 sm:gap-3 text-center min-h-[100px] sm:min-h-[120px] ${getStatusClasses(seat.status)}`}>
+                  <p className="text-xl sm:text-2xl font-bold">{seat.seatNumber}</p>
+                  <span className="rounded-full bg-white/80 px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
                     {getStatusLabel(seat.status)}
                   </span>
                 </div>
