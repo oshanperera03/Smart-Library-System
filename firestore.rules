@@ -2,39 +2,109 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // =====================================================
+    // AUTHENTICATION HELPERS
+    // =====================================================
+
     function signedIn() {
       return request.auth != null;
     }
 
     function isAdmin() {
-      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.role == 'admin';
     }
 
+
+    // =====================================================
+    // USERS
+    // =====================================================
+
     match /users/{userId} {
+
+      // Logged-in users can view users
       allow read: if signedIn();
+
+      // User can create their own account
       allow create: if signedIn()
         && request.auth.uid == userId
         && request.resource.data.uid == request.auth.uid;
+
+      // User can update their own account
+      // Admin can update any account
       allow update: if signedIn()
-        && (request.auth.uid == userId || isAdmin());
+        && (
+          request.auth.uid == userId
+          || isAdmin()
+        );
+
+      // Users cannot be deleted
       allow delete: if false;
     }
+
+
+    // =====================================================
+    // SEATS
+    // =====================================================
 
     match /seats/{seatId} {
+
+      // Dashboard / authenticated users can view seats
       allow read: if signedIn();
-      allow create, update: if signedIn();
+
+      // ESP32 and authenticated users can create seats
+      allow create: if true;
+
+      // ESP32 and authenticated users can update seats
+      allow update: if true;
+
+      // Seats cannot be deleted
       allow delete: if false;
     }
+
+
+    // =====================================================
+    // RFID LOGS
+    // =====================================================
 
     match /rfid_logs/{logId} {
+
+      // Dashboard can read RFID logs
       allow read: if signedIn();
-      allow create, update: if signedIn();
+
+      // ESP32 can create RFID logs
+      allow create: if true;
+
+      // RFID logs cannot be modified
+      allow update: if false;
+
+      // RFID logs cannot be deleted
       allow delete: if false;
     }
 
+
+    // =====================================================
+    // RESERVATIONS
+    // =====================================================
+
     match /reservations/{reservationId} {
+
+      // Logged-in users can read reservations
       allow read: if signedIn();
-      allow create, update: if signedIn();
+
+      // ESP32 / authenticated users can create reservations
+      allow create: if true;
+
+      // ESP32 / authenticated users can update reservations
+      allow update: if true;
+
+      // Reservations cannot be deleted
       allow delete: if false;
     }
   }
