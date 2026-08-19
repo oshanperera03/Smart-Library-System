@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { reserveSeat, findAvailableSeat } from '../services/seatService';
+import { normalizeSeatStatus } from '../utils/formatters';
 
 const AUTO_ASSIGN_DELAY_MS = 10000;
 
@@ -10,10 +11,10 @@ const RfidTapModal = ({ rfidLog, seats, onClose, onAssigned }) => {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(10);
 
-  const availableSeats = seats.filter((seat) => seat.status === 'available');
+  const availableSeats = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'available');
 
   const reservedSeat = seats.find(
-    (seat) => seat.status === 'reserved' && seat.studentId === rfidLog.studentId
+    (seat) => normalizeSeatStatus(seat.status) === 'reserved' && seat.studentId === rfidLog.studentId
   );
 
   useEffect(() => {

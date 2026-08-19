@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { CalendarDays, CircleDollarSign, MonitorCheck, Users2, LogOut, User, Activity } from 'lucide-react';
 import StatCard from '../components/StatCard';
-import { getStatusClasses, getStatusLabel } from '../utils/formatters';
+import { getSeatDisplayStatus, getStatusClasses, getStatusLabel, normalizeSeatStatus } from '../utils/formatters';
 
 const StudentHomePage = () => {
   const { userProfile, logout } = useAuth();
@@ -25,9 +25,9 @@ const StudentHomePage = () => {
 
   const stats = useMemo(() => {
     const total = seats.length;
-    const available = seats.filter((seat) => seat.status === 'available').length;
-    const reserved = seats.filter((seat) => seat.status === 'reserved').length;
-    const occupied = seats.filter((seat) => seat.status === 'occupied').length;
+    const available = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'available').length;
+    const reserved = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'reserved').length;
+    const occupied = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'occupied').length;
 
     return { total, available, reserved, occupied };
   }, [seats]);
@@ -112,10 +112,10 @@ const StudentHomePage = () => {
               <p className="col-span-full text-center text-sm text-slate-500 py-10">No seats found.</p>
             ) : (
               seats.map((seat) => (
-                <div key={seat.id} className={`rounded-2xl border p-4 sm:p-5 shadow-sm transition-transform hover:-translate-y-1 flex flex-col items-center justify-center gap-2 sm:gap-3 text-center min-h-[100px] sm:min-h-[120px] ${getStatusClasses(seat.status)}`}>
+                <div key={seat.id} className={`rounded-2xl border p-4 sm:p-5 shadow-sm transition-transform hover:-translate-y-1 flex flex-col items-center justify-center gap-2 sm:gap-3 text-center min-h-[100px] sm:min-h-[120px] ${getStatusClasses(getSeatDisplayStatus(seat))}`}>
                   <p className="text-xl sm:text-2xl font-bold">{seat.seatNumber}</p>
                   <span className="rounded-full bg-white/80 px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-                    {getStatusLabel(seat.status)}
+                    {getStatusLabel(getSeatDisplayStatus(seat))}
                   </span>
                 </div>
               ))

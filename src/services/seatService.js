@@ -10,6 +10,15 @@ export const reserveSeat = async (seatId, studentId, studentName) => {
   });
 };
 
+export const verifySeat = async (seatId, studentId, studentName) => {
+  const seatRef = doc(db, 'seats', seatId);
+  await updateDoc(seatRef, {
+    status: 'verified',
+    studentId,
+    studentName,
+  });
+};
+
 export const occupySeat = async (seatId, studentId, studentName) => {
   const seatRef = doc(db, 'seats', seatId);
   await updateDoc(seatRef, {

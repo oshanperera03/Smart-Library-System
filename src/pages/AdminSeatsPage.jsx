@@ -4,7 +4,7 @@ import { reserveSeat, occupySeat, setSeatAvailable } from '../services/seatServi
 import Sidebar from '../components/Sidebar';
 import TopNav from '../components/TopNav';
 import StatCard from '../components/StatCard';
-import { getStatusClasses } from '../utils/formatters';
+import { getSeatDisplayStatus, getStatusClasses, normalizeSeatStatus } from '../utils/formatters';
 
 const AdminSeatsPage = () => {
   const { seats, students, loading, errors } = useDashboardData();
@@ -15,9 +15,9 @@ const AdminSeatsPage = () => {
 
   const stats = useMemo(() => {
     const total = seats.length;
-    const available = seats.filter((seat) => seat.status === 'available').length;
-    const reserved = seats.filter((seat) => seat.status === 'reserved').length;
-    const occupied = seats.filter((seat) => seat.status === 'occupied').length;
+    const available = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'available').length;
+    const reserved = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'reserved').length;
+    const occupied = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'occupied').length;
     return { total, available, reserved, occupied };
   }, [seats]);
 
@@ -108,13 +108,13 @@ const AdminSeatsPage = () => {
                         <tr key={seat.id} className="hover:bg-slate-50">
                           <td className="px-3 py-3 font-semibold text-slate-800">{seat.seatNumber}</td>
                           <td className="px-3 py-3">
-                            <span className={`${getStatusClasses(seat.status)} inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em]`}>
-                              {seat.status}
+                            <span className={`${getStatusClasses(getSeatDisplayStatus(seat))} inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em]`}>
+                              {getSeatDisplayStatus(seat)}
                             </span>
                           </td>
                           <td className="px-3 py-3 text-slate-700">{seat.studentName || '—'}</td>
                           <td className="px-3 py-3">
-                            {seat.status === 'available' ? (
+                            {normalizeSeatStatus(seat.status) === 'available' ? (
                               <select
                                 value={assignments[seat.id] || ''}
                                 onChange={(e) => handleSelectStudent(seat.id, e.target.value)}
@@ -132,7 +132,7 @@ const AdminSeatsPage = () => {
                             )}
                           </td>
                           <td className="px-3 py-3 space-y-2">
-                            {seat.status === 'available' ? (
+                            {normalizeSeatStatus(seat.status) === 'available' ? (
                               <button
                                 type="button"
                                 disabled={busySeat === seat.id}
@@ -141,7 +141,7 @@ const AdminSeatsPage = () => {
                               >
                                 Reserve
                               </button>
-                            ) : seat.status === 'reserved' ? (
+                            ) : normalizeSeatStatus(seat.status) === 'reserved' ? (
                               <button
                                 type="button"
                                 disabled={busySeat === seat.id}

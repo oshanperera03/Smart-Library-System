@@ -1,29 +1,35 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
-import { CalendarDays, CircleDollarSign, MonitorCheck, Users2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CircleDollarSign, MonitorCheck, Users2 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useDashboardData } from '../hooks/useDashboardData';
 import Sidebar from '../components/Sidebar';
 import TopNav from '../components/TopNav';
 import StatCard from '../components/StatCard';
 import RfidTapModal from '../components/RfidTapModal';
-import { formatTimestamp, getStatusClasses, getStatusLabel } from '../utils/formatters';
-import { occupySeat } from '../services/seatService';
+import { formatTimestamp, getSeatDisplayStatus, getStatusClasses, getStatusLabel, isUnauthorizedAlert, normalizeSeatStatus } from '../utils/formatters';
+import { verifySeat } from '../services/seatService';
 import 'react-toastify/dist/ReactToastify.css';
 
 const DashboardPage = () => {
   const { seats, rfidLogs, latestRfidLog, reservations, loading, errors } = useDashboardData();
   const [showRfidModal, setShowRfidModal] = useState(false);
   const [mismatchDetails, setMismatchDetails] = useState(null);
+  const notifiedUnauthorizedSeats = useRef(new Set());
+
+  const unauthorizedSeats = useMemo(
+    () => seats.filter((seat) => isUnauthorizedAlert(seat)),
+    [seats]
+  );
 
   const stats = useMemo(() => {
     const total = seats.length;
-    const available = seats.filter((seat) => seat.status === 'available').length;
-    const reserved = seats.filter((seat) => seat.status === 'reserved').length;
-    const occupied = seats.filter((seat) => seat.status === 'occupied').length;
+    const available = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'available').length;
+    const reserved = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'reserved').length;
+    const occupied = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'occupied').length;
 
-    return { total, available, reserved, occupied };
-  }, [seats]);
+    return { total, available, reserved, occupied, unauthorized: unauthorizedSeats.length };
+  }, [seats, unauthorizedSeats]);
 
   const reservationSeries = useMemo(() => {
     const counts = reservations.reduce((acc, reservation) => {
@@ -38,8 +44,25 @@ const DashboardPage = () => {
   const seatChartData = useMemo(() => [
     { name: 'Available', value: stats.available, color: '#10b981' },
     { name: 'Reserved', value: stats.reserved, color: '#f59e0b' },
+    { name: 'Verified', value: seats.filter((seat) => normalizeSeatStatus(seat.status) === 'verified').length, color: '#eab308' },
     { name: 'Occupied', value: stats.occupied, color: '#ef4444' },
-  ], [stats]);
+    { name: 'Unauthorized', value: stats.unauthorized, color: '#b91c1c' },
+  ], [seats, stats]);
+
+  useEffect(() => {
+    const activeIds = new Set(unauthorizedSeats.map((seat) => seat.id));
+
+    unauthorizedSeats.forEach((seat) => {
+      if (!notifiedUnauthorizedSeats.current.has(seat.id)) {
+        toast.error(`Unauthorized occupancy detected at ${seat.seatNumber}.`);
+        notifiedUnauthorizedSeats.current.add(seat.id);
+      }
+    });
+
+    notifiedUnauthorizedSeats.current.forEach((seatId) => {
+      if (!activeIds.has(seatId)) notifiedUnauthorizedSeats.current.delete(seatId);
+    });
+  }, [unauthorizedSeats]);
 
   useEffect(() => {
     if (latestRfidLog) {
@@ -58,15 +81,14 @@ const DashboardPage = () => {
         } else if (tappedSeat) {
           // It's a tap at a specific seat
           const studentReservedSeat = seats.find(
-            (s) => s.status === 'reserved' && s.studentId === latestRfidLog.studentId
+            (s) => normalizeSeatStatus(s.status) === 'reserved' && s.studentId === latestRfidLog.studentId
           );
 
           if (studentReservedSeat) {
             if (studentReservedSeat.id === tappedSeat.id) {
-              // Correct seat!
-              occupySeat(tappedSeat.id, latestRfidLog.studentId, latestRfidLog.studentName)
-                .then(() => toast.success(`Seat ${tappedSeat.seatNumber} occupied successfully.`))
-                .catch(() => toast.error('Failed to occupy seat.'));
+              verifySeat(tappedSeat.id, latestRfidLog.studentId, latestRfidLog.studentName)
+                .then(() => toast.success(`Seat ${tappedSeat.seatNumber} verified successfully.`))
+                .catch(() => toast.error('Failed to verify seat.'));
             } else {
               setMismatchDetails({
                 studentName: latestRfidLog.studentName || 'Unknown',
@@ -108,12 +130,34 @@ const DashboardPage = () => {
           <TopNav title="Dashboard Overview" subtitle="Live seat and RFID activity from Firestore" />
 
           <div className="space-y-6 p-6">
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
               <StatCard title="Total Seats" value={stats.total} subtitle="Across the library" icon={MonitorCheck} tone="cyan" />
               <StatCard title="Available Seats" value={stats.available} subtitle="Ready for booking" icon={CircleDollarSign} tone="emerald" />
               <StatCard title="Reserved Seats" value={stats.reserved} subtitle="Pending occupancy" icon={CalendarDays} tone="amber" />
               <StatCard title="Occupied Seats" value={stats.occupied} subtitle="Currently active" icon={Users2} tone="rose" />
+              <StatCard title="Unauthorized Alerts" value={stats.unauthorized} subtitle="Active occupancy warnings" icon={AlertTriangle} tone="rose" />
             </section>
+
+            {unauthorizedSeats.length > 0 ? (
+              <section className="rounded-3xl border border-red-200 bg-red-50 p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <AlertTriangle className="h-6 w-6 text-red-700" />
+                  <div>
+                    <h2 className="text-lg font-semibold text-red-800">Unauthorized Occupancy</h2>
+                    <p className="text-sm text-red-700">Active seats detected without a reservation.</p>
+                  </div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {unauthorizedSeats.map((seat) => (
+                    <div key={seat.id} className="rounded-2xl border border-red-200 bg-white p-4">
+                      <p className="font-semibold text-red-800">Seat {seat.seatNumber}</p>
+                      <p className="mt-1 text-sm text-red-700">{seat.alertMessage || 'Someone is sitting without a reservation.'}</p>
+                      {seat.fsrValue !== undefined ? <p className="mt-2 text-xs text-red-600">FSR value: {seat.fsrValue}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <section className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
               <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -130,15 +174,17 @@ const DashboardPage = () => {
                     <p className="text-sm text-rose-500">{errors.seats}</p>
                   ) : (
                     seats.map((seat) => (
-                      <div key={seat.id} className={`rounded-2xl border p-4 shadow-sm ${getStatusClasses(seat.status)}`}>
+                      <div key={seat.id} className={`rounded-2xl border p-4 shadow-sm ${getStatusClasses(getSeatDisplayStatus(seat))}`}>
                         <div className="flex items-center justify-between">
                           <p className="text-lg font-semibold">{seat.seatNumber}</p>
                           <span className="rounded-full bg-white/70 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide">
-                            {getStatusLabel(seat.status)}
+                            {getStatusLabel(getSeatDisplayStatus(seat))}
                           </span>
                         </div>
                         <p className="mt-3 text-sm">
-                          {seat.studentName || seat.studentId ? `Assigned: ${seat.studentName || seat.studentId}` : 'No student assigned'}
+                          {isUnauthorizedAlert(seat)
+                            ? (seat.alertMessage || 'Someone is sitting without a reservation.')
+                            : (seat.studentName || seat.studentId ? `Assigned: ${seat.studentName || seat.studentId}` : 'No student assigned')}
                         </p>
                       </div>
                     ))
