@@ -14,6 +14,7 @@ import 'react-toastify/dist/ReactToastify.css';
 const DashboardPage = () => {
   const { seats, rfidLogs, latestRfidLog, reservations, loading, errors } = useDashboardData();
   const [showRfidModal, setShowRfidModal] = useState(false);
+  const [mismatchDetails, setMismatchDetails] = useState(null);
 
   const stats = useMemo(() => {
     const total = seats.length;
@@ -67,17 +68,26 @@ const DashboardPage = () => {
                 .then(() => toast.success(`Seat ${tappedSeat.seatNumber} occupied successfully.`))
                 .catch(() => toast.error('Failed to occupy seat.'));
             } else {
-              // Wrong seat!
-              toast.error(
-                <div>
-                  <strong>Seat Mismatch!</strong><br />
-                  Name: {latestRfidLog.studentName}<br />
-                  ID: {latestRfidLog.studentId}<br />
-                  Reserved Seat: {studentReservedSeat.seatNumber}<br />
-                  Tapped Seat: {tappedSeat.seatNumber}
-                </div>,
-                { autoClose: 10000 } // Keep open longer for admin to see
-              );
+              setMismatchDetails({
+                studentName: latestRfidLog.studentName || 'Unknown',
+                studentId: latestRfidLog.studentId || 'Unknown',
+                rfidUid: latestRfidLog.rfidUid || 'Unknown',
+                readerLocation: latestRfidLog.readerLocation || 'Unknown',
+                reservedSeat: {
+                  id: studentReservedSeat.id,
+                  seatNumber: studentReservedSeat.seatNumber,
+                  status: studentReservedSeat.status,
+                  studentName: studentReservedSeat.studentName || 'Unknown',
+                  studentId: studentReservedSeat.studentId || 'Unknown',
+                },
+                tappedSeat: {
+                  id: tappedSeat.id,
+                  seatNumber: tappedSeat.seatNumber,
+                  status: tappedSeat.status,
+                  studentName: tappedSeat.studentName || 'Unknown',
+                  studentId: tappedSeat.studentId || 'Unknown',
+                },
+              });
             }
           } else {
             toast.info(`Student ${latestRfidLog.studentName} tapped at ${tappedSeat.seatNumber} but has no reserved seat.`);
@@ -251,6 +261,50 @@ const DashboardPage = () => {
         </main>
       </div>
       <ToastContainer />
+      {mismatchDetails ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4">
+          <div className="w-full max-w-2xl rounded-3xl border border-rose-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-rose-500">Seat Mismatch</p>
+                <h3 className="mt-2 text-2xl font-bold text-slate-800">RFID mismatch detected</h3>
+              </div>
+              <button
+                onClick={() => setMismatchDetails(null)}
+                className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <h4 className="mb-3 text-lg font-semibold text-slate-800">Student details</h4>
+                <div className="space-y-2 text-sm text-slate-700">
+                  <p><span className="font-medium text-slate-500">Name:</span> {mismatchDetails.studentName}</p>
+                  <p><span className="font-medium text-slate-500">Student ID:</span> {mismatchDetails.studentId}</p>
+                  <p><span className="font-medium text-slate-500">RFID UID:</span> {mismatchDetails.rfidUid}</p>
+                  <p><span className="font-medium text-slate-500">Reader:</span> {mismatchDetails.readerLocation}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <h4 className="mb-3 text-lg font-semibold text-slate-800">Seat details</h4>
+                <div className="space-y-2 text-sm text-slate-700">
+                  <p><span className="font-medium text-slate-500">Reserved seat:</span> {mismatchDetails.reservedSeat.seatNumber}</p>
+                  <p><span className="font-medium text-slate-500">Reserved student:</span> {mismatchDetails.reservedSeat.studentName}</p>
+                  <p><span className="font-medium text-slate-500">Tapped seat:</span> {mismatchDetails.tappedSeat.seatNumber}</p>
+                  <p><span className="font-medium text-slate-500">Tapped seat status:</span> {mismatchDetails.tappedSeat.status}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+              The card was scanned at the wrong seat. The reserved seat and the tapped seat do not match.
+            </div>
+          </div>
+        </div>
+      ) : null}
       {showRfidModal && latestRfidLog ? (
         <RfidTapModal
           rfidLog={latestRfidLog}
