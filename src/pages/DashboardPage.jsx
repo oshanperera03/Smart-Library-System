@@ -7,8 +7,8 @@ import Sidebar from '../components/Sidebar';
 import TopNav from '../components/TopNav';
 import StatCard from '../components/StatCard';
 import RfidTapModal from '../components/RfidTapModal';
-import { formatTimestamp, getSeatDisplayStatus, getStatusClasses, getStatusLabel, isUnauthorizedAlert, normalizeSeatStatus } from '../utils/formatters';
-import { verifySeat } from '../services/seatService';
+import { formatTimestamp, getSeatDisplayStatus, getStatusClasses, getStatusLabel, getTimestampMillis, isUnauthorizedAlert, normalizeSeatStatus } from '../utils/formatters';
+import { setSeatAvailable, verifySeat } from '../services/seatService';
 import 'react-toastify/dist/ReactToastify.css';
 
 const DashboardPage = () => {
@@ -26,7 +26,7 @@ const DashboardPage = () => {
     const total = seats.length;
     const available = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'available').length;
     const reserved = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'reserved').length;
-    const occupied = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'occupied').length;
+    const occupied = seats.filter((seat) => getSeatDisplayStatus(seat) === 'occupied').length;
 
     return { total, available, reserved, occupied, unauthorized: unauthorizedSeats.length };
   }, [seats, unauthorizedSeats]);
@@ -44,7 +44,7 @@ const DashboardPage = () => {
   const seatChartData = useMemo(() => [
     { name: 'Available', value: stats.available, color: '#10b981' },
     { name: 'Reserved', value: stats.reserved, color: '#f59e0b' },
-    { name: 'Verified', value: seats.filter((seat) => normalizeSeatStatus(seat.status) === 'verified').length, color: '#eab308' },
+    { name: 'Verified', value: seats.filter((seat) => getSeatDisplayStatus(seat) === 'verified').length, color: '#eab308' },
     { name: 'Occupied', value: stats.occupied, color: '#ef4444' },
     { name: 'Unauthorized', value: stats.unauthorized, color: '#b91c1c' },
   ], [seats, stats]);
@@ -63,6 +63,19 @@ const DashboardPage = () => {
       if (!activeIds.has(seatId)) notifiedUnauthorizedSeats.current.delete(seatId);
     });
   }, [unauthorizedSeats]);
+
+  useEffect(() => {
+    const releaseTimers = seats
+      .filter((seat) => normalizeSeatStatus(seat.status) === 'verified' && seat.verificationExpiresAt)
+      .map((seat) => {
+        const remainingMs = getTimestampMillis(seat.verificationExpiresAt) - Date.now();
+        return window.setTimeout(() => {
+          setSeatAvailable(seat.id).catch(() => {});
+        }, Math.max(remainingMs, 0));
+      });
+
+    return () => releaseTimers.forEach((timerId) => window.clearTimeout(timerId));
+  }, [seats]);
 
   useEffect(() => {
     if (latestRfidLog) {
@@ -90,6 +103,7 @@ const DashboardPage = () => {
                 .then(() => toast.success(`Seat ${tappedSeat.seatNumber} verified successfully.`))
                 .catch(() => toast.error('Failed to verify seat.'));
             } else {
+              toast.error(`Wrong seat alert: you tapped ${tappedSeat.seatNumber}, but your reserved seat is ${studentReservedSeat.seatNumber}.`);
               setMismatchDetails({
                 studentName: latestRfidLog.studentName || 'Unknown',
                 studentId: latestRfidLog.studentId || 'Unknown',
@@ -151,7 +165,7 @@ const DashboardPage = () => {
                   {unauthorizedSeats.map((seat) => (
                     <div key={seat.id} className="rounded-2xl border border-red-200 bg-white p-4">
                       <p className="font-semibold text-red-800">Seat {seat.seatNumber}</p>
-                      <p className="mt-1 text-sm text-red-700">{seat.alertMessage || 'Someone is sitting without a reservation.'}</p>
+                      <p className="mt-1 text-sm text-red-700">{seat.alertMessage || 'Pressure detected at an available seat. Verify the student before assigning it.'}</p>
                       {seat.fsrValue !== undefined ? <p className="mt-2 text-xs text-red-600">FSR value: {seat.fsrValue}</p> : null}
                     </div>
                   ))}

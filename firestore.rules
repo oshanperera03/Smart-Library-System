@@ -55,8 +55,8 @@ service cloud.firestore {
 
     match /seats/{seatId} {
 
-      // Dashboard / authenticated users can view seats
-      allow read: if signedIn();
+      // The ESP32 reads seat status with the project API key, not Firebase Auth.
+      allow read: if true;
 
       // ESP32 and authenticated users can create seats
       allow create: if true;

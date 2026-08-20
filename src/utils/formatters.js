@@ -10,14 +10,26 @@ export const formatTimestamp = (value) => {
   }).format(date);
 };
 
+export const getTimestampMillis = (value) => {
+  if (!value) return 0;
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+};
+
 export const normalizeSeatStatus = (status) => String(status || '').trim().toLowerCase();
 
+export const hasFsrPressure = (seat) => Number(seat?.fsrValue) > 0;
+
 export const isUnauthorizedAlert = (seat) => (
-  seat?.alert === true || normalizeSeatStatus(seat?.status) === 'unauthorized'
+  seat?.alert === true
+  || normalizeSeatStatus(seat?.status) === 'unauthorized'
+  || (normalizeSeatStatus(seat?.status) === 'available' && hasFsrPressure(seat))
 );
 
 export const getSeatDisplayStatus = (seat) => (
-  isUnauthorizedAlert(seat) ? 'unauthorized' : normalizeSeatStatus(seat?.status)
+  isUnauthorizedAlert(seat)
+    ? 'unauthorized'
+    : (normalizeSeatStatus(seat?.status) === 'verified' && hasFsrPressure(seat) ? 'occupied' : normalizeSeatStatus(seat?.status))
 );
 
 export const getStatusLabel = (status) => {

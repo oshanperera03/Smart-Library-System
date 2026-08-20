@@ -1,13 +1,47 @@
 import { collection, getDocs, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
+const toSeatSortKey = (seat) => {
+  const rawSeatNumber = seat.seatNumber ?? seat.seatNo ?? seat.seat_number ?? seat.number ?? seat.name ?? seat.id;
+  const seatLabel = String(rawSeatNumber ?? '').trim();
+  const numericValue = Number(seatLabel.replace(/[^0-9]/g, ''));
+
+  return {
+    seatLabel,
+    numericValue: Number.isFinite(numericValue) ? numericValue : Number.POSITIVE_INFINITY,
+  };
+};
+
+const normalizeSeat = (seat) => {
+  const { seatLabel } = toSeatSortKey(seat);
+  return {
+    ...seat,
+    seatNumber: seatLabel || seat.id,
+    status: seat.status || 'available',
+  };
+};
+
+const sortSeats = (seats) => (
+  [...seats].sort((a, b) => {
+    const aKey = toSeatSortKey(a);
+    const bKey = toSeatSortKey(b);
+
+    if (aKey.numericValue !== bKey.numericValue) {
+      return aKey.numericValue - bKey.numericValue;
+    }
+
+    return aKey.seatLabel.localeCompare(bKey.seatLabel, undefined, { numeric: true, sensitivity: 'base' });
+  })
+);
+
 export const subscribeToSeats = (callback, onError) => {
-  const q = query(collection(db, 'seats'), orderBy('seatNumber'));
+  const q = query(collection(db, 'seats'));
   return onSnapshot(
     q,
     (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      callback(data);
+      const data = snapshot.docs
+        .map((doc) => normalizeSeat({ id: doc.id, ...doc.data() }));
+      callback(sortSeats(data));
     },
     (error) => onError?.(error)
   );
@@ -43,8 +77,25 @@ const lookupStudentByRfidUid = async (rfidUid) => {
   return { uid: userDoc.id, ...userDoc.data() };
 };
 
+const normalizeRfidLog = (log) => {
+  const rawReaderLocation = log.readerLocation
+    ?? log.reader_location
+    ?? log.location
+    ?? log.reader
+    ?? log.readerName
+    ?? log.reader_name
+    ?? '';
+
+  const readerLocation = String(rawReaderLocation ?? '').trim();
+
+  return {
+    ...log,
+    readerLocation,
+  };
+};
+
 const enrichRfidLog = async (logDoc) => {
-  const logData = { id: logDoc.id, ...logDoc.data() };
+  const logData = normalizeRfidLog({ id: logDoc.id, ...logDoc.data() });
 
   if (logData.studentName && logData.studentId) {
     return logData;

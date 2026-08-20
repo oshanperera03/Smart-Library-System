@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useDashboardData } from '../hooks/useDashboardData';
-import { reserveSeat, occupySeat, setSeatAvailable } from '../services/seatService';
+import { extendSeatTime, reserveSeat, occupySeat, setSeatAvailable } from '../services/seatService';
 import Sidebar from '../components/Sidebar';
 import TopNav from '../components/TopNav';
 import StatCard from '../components/StatCard';
@@ -17,7 +17,7 @@ const AdminSeatsPage = () => {
     const total = seats.length;
     const available = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'available').length;
     const reserved = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'reserved').length;
-    const occupied = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'occupied').length;
+    const occupied = seats.filter((seat) => getSeatDisplayStatus(seat) === 'occupied').length;
     return { total, available, reserved, occupied };
   }, [seats]);
 
@@ -53,6 +53,11 @@ const AdminSeatsPage = () => {
       if (action === 'release') {
         await setSeatAvailable(seat.id);
         setActionSuccess(`Seat ${seat.seatNumber} is now available.`);
+      }
+
+      if (action === 'extend') {
+        await extendSeatTime(seat.id, 5);
+        setActionSuccess(`Seat ${seat.seatNumber} was extended by 5 minutes.`);
       }
     } catch (err) {
       setActionError(err.message || 'Action failed.');
@@ -112,7 +117,10 @@ const AdminSeatsPage = () => {
                               {getSeatDisplayStatus(seat)}
                             </span>
                           </td>
-                          <td className="px-3 py-3 text-slate-700">{seat.studentName || '—'}</td>
+                          <td className="px-3 py-3 text-slate-700">
+                            {seat.studentName || '—'}
+                            {seat.extensionRequested ? <span className="ml-2 text-xs font-semibold text-amber-600">Time requested</span> : null}
+                          </td>
                           <td className="px-3 py-3">
                             {normalizeSeatStatus(seat.status) === 'available' ? (
                               <select
@@ -127,6 +135,25 @@ const AdminSeatsPage = () => {
                                   </option>
                                 ))}
                               </select>
+                            ) : normalizeSeatStatus(seat.status) === 'verified' ? (
+                              <div className="space-y-2">
+                                <button
+                                  type="button"
+                                  disabled={busySeat === seat.id}
+                                  onClick={() => performAction(seat, 'extend')}
+                                  className="w-full rounded-2xl bg-amber-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:opacity-50"
+                                >
+                                  Extend 5 min
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busySeat === seat.id}
+                                  onClick={() => performAction(seat, 'release')}
+                                  className="w-full rounded-2xl bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300 disabled:opacity-50"
+                                >
+                                  Release
+                                </button>
+                              </div>
                             ) : (
                               <span className="text-slate-500">{seat.studentId || 'No ID'}</span>
                             )}

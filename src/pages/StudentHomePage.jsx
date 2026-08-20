@@ -2,15 +2,18 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../hooks/useDashboardData';
-import { CalendarDays, CircleDollarSign, MonitorCheck, Users2, LogOut, User, Activity } from 'lucide-react';
+import { CalendarDays, CircleDollarSign, MonitorCheck, Users2, LogOut, User, Activity, Clock } from 'lucide-react';
 import StatCard from '../components/StatCard';
-import { getSeatDisplayStatus, getStatusClasses, getStatusLabel, normalizeSeatStatus } from '../utils/formatters';
+import { formatTimestamp, getSeatDisplayStatus, getStatusClasses, getStatusLabel, normalizeSeatStatus } from '../utils/formatters';
+import { requestSeatExtension } from '../services/seatService';
 
 const StudentHomePage = () => {
   const { userProfile, logout } = useAuth();
   const navigate = useNavigate();
   const { seats, loading, errors } = useDashboardData();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [extensionError, setExtensionError] = useState('');
+  const [extensionRequested, setExtensionRequested] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -27,10 +30,26 @@ const StudentHomePage = () => {
     const total = seats.length;
     const available = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'available').length;
     const reserved = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'reserved').length;
-    const occupied = seats.filter((seat) => normalizeSeatStatus(seat.status) === 'occupied').length;
+    const occupied = seats.filter((seat) => getSeatDisplayStatus(seat) === 'occupied').length;
 
     return { total, available, reserved, occupied };
   }, [seats]);
+
+  const mySeat = seats.find((seat) => (
+    seat.studentId === userProfile?.studentId
+    && ['reserved', 'verified', 'occupied'].includes(normalizeSeatStatus(seat.status))
+  ));
+
+  const handleRequestExtension = async () => {
+    if (!mySeat) return;
+    setExtensionError('');
+    try {
+      await requestSeatExtension(mySeat.id);
+      setExtensionRequested(true);
+    } catch (err) {
+      setExtensionError(err.message || 'Could not send the extension request.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
@@ -95,6 +114,35 @@ const StudentHomePage = () => {
           <StatCard title="Reserved" value={stats.reserved} subtitle="Pending occupancy" icon={CalendarDays} tone="amber" />
           <StatCard title="Occupied" value={stats.occupied} subtitle="Currently active" icon={Users2} tone="rose" />
         </section>
+
+        {mySeat ? (
+          <section className="rounded-3xl border border-cyan-200 bg-cyan-50 p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">Your seat</p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-800">{mySeat.seatNumber}</h2>
+                <p className="mt-1 text-sm text-slate-600">Status: {getStatusLabel(mySeat.status)}</p>
+                {mySeat.verificationExpiresAt ? (
+                  <p className="mt-1 flex items-center gap-1 text-sm text-slate-600">
+                    <Clock className="h-4 w-4" />
+                    Verification ends {formatTimestamp(mySeat.verificationExpiresAt)}
+                  </p>
+                ) : null}
+              </div>
+              {normalizeSeatStatus(mySeat.status) === 'verified' ? (
+                <button
+                  type="button"
+                  disabled={extensionRequested || mySeat.extensionRequested}
+                  onClick={handleRequestExtension}
+                  className="rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {extensionRequested || mySeat.extensionRequested ? 'Request sent' : 'Ask admin for more time'}
+                </button>
+              ) : null}
+            </div>
+            {extensionError ? <p className="mt-3 text-sm text-rose-600">{extensionError}</p> : null}
+          </section>
+        ) : null}
 
         {/* Seat Layout Section */}
         <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
