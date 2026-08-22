@@ -74,10 +74,7 @@ const Sidebar = () => {
           })}
         </nav>
 
-        <div className="mt-6 rounded-3xl border border-cyan-400/20 bg-cyan-500/10 p-4">
-          <p className="text-sm font-semibold text-cyan-200">Esp32 Integration</p>
-          <p className="mt-2 text-sm text-slate-300">Dashboard prepared for live hardware events.</p>
-        </div>
+      
       </aside>
     </>
   );
